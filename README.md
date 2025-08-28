@@ -8,7 +8,7 @@ A React Native Expo app for connecting to and monitoring CAN bus networks via We
 - Navigation between different CAN operations
 - Persistent server configuration using AsyncStorage
 - TypeScript support with strict typing
-- React Navigation for seamless screen transitions
+- Expo Router (file-based routing on top of React Navigation)
 
 ## Installation
 
@@ -19,13 +19,10 @@ npm install
 
 2. Install Expo-specific dependencies:
 ```bash
-npx expo install react-native-screens react-native-safe-area-context @react-native-async-storage/async-storage
+npx expo install react-native-screens react-native-safe-area-context @react-native-async-storage/async-storage expo-router
 ```
 
-3. Install React Navigation packages:
-```bash
-npm install @react-navigation/native @react-navigation/native-stack
-```
+Expo Router is already configured in `app.json` (plugin) and `package.json` (main entry).
 
 ## Running the App
 
@@ -45,25 +42,25 @@ npm run web
 
 ## App Structure
 
-### Navigation Flow
+### Navigation Flow (Expo Router)
 
-1. **LaunchGate**: Determines initial route based on saved servers
-   - No servers → Navigate to Servers screen
-   - Servers exist but none selected → Navigate to ServerSelect
-   - Server selected → Navigate to MainMenu
+File-based routes are under `app/` and screens live in `screens/`.
 
-2. **MainMenu**: Main dashboard with 4 operation buttons
+1. `app/index.tsx` → **LaunchGate** decides initial route:
+   - No servers → navigate to `/settings/servers`
+   - Servers exist but none selected → navigate to `/server-select`
+   - Server selected → navigate to `/main-menu`
+
+2. **MainMenu** (`/main-menu`): Main dashboard with 4 operation buttons
    - Sniff CAN Messages
    - Log All Messages
    - Send Custom Message
    - Saved Messages
    - Settings gear icon in header
 
-3. **ServerSelect**: Choose from available servers when none is selected
+3. **ServerSelect** (`/server-select`): Choose from available servers when none is selected
 
-4. **Settings Stack**: 
-   - Settings: Main settings screen
-   - Servers: Full CRUD operations for server management
+4. **Settings** (`/settings`) and **Servers** (`/settings/servers`): Manage servers (CRUD + select)
 
 ### Key Components
 
@@ -85,7 +82,7 @@ type Server = {
 ## Development
 
 The app uses:
-- **React Navigation 7** for navigation
+- **Expo Router** (file-based routing powered by React Navigation)
 - **TypeScript** for type safety
 - **React Context + useReducer** for state management
 - **AsyncStorage** for persistence
@@ -94,23 +91,38 @@ The app uses:
 ### File Structure
 
 ```
-src/
-├── navigation/
-│   ├── AppNavigator.tsx    # Main navigation setup
-│   └── types.ts           # Navigation type definitions
-├── screens/
-│   ├── LaunchGate.tsx     # Initial routing logic
-│   ├── MainMenu.tsx       # Main dashboard
-│   ├── ServerSelect.tsx   # Server selection
-│   ├── Settings.tsx       # Settings menu
-│   ├── Servers.tsx        # Server management
-│   └── [Placeholder screens for CAN operations]
-├── context/
-│   └── SettingsContext.tsx # State management
-├── components/
-│   └── HeaderGear.tsx     # Settings icon
-└── utils/
-    └── storage.ts         # AsyncStorage utilities
+app/
+├── _layout.tsx              # Router layout, wraps app with SettingsProvider
+├── +not-found.tsx           # Not found route
+├── index.tsx                # LaunchGate (initial routing)
+├── main-menu.tsx            # Main menu route
+├── server-select.tsx        # Select server route
+├── sniff.tsx                # Placeholder route
+├── log-all.tsx              # Placeholder route
+├── send-custom.tsx          # Placeholder route
+├── saved-messages.tsx       # Placeholder route
+└── settings/
+    └── servers.tsx         # Servers management route
+
+screens/
+├── LaunchGate.tsx
+├── MainMenu.tsx
+├── ServerSelect.tsx
+├── Settings.tsx
+├── Servers.tsx
+├── Sniff.tsx
+├── LogAll.tsx
+├── SendCustom.tsx
+└── SavedMessages.tsx
+
+context/
+└── SettingsContext.tsx
+
+components/
+└── HeaderGear.tsx
+
+utils/
+└── storage.ts
 ```
 
 ## Next Steps
