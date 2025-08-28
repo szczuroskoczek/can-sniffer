@@ -360,19 +360,19 @@ function rpmForSpeed(kph) {
 function printHelp() {
   term.bold.green("\nCAN Dev WS + TUI\n");
   term("Controls: ");
-  term.gray("q")(": quit  ");
-  term.gray("g")(": ignition  ");
-  term.gray("e")(": engine  ");
-  term.gray("\u2191/\u2193")(": accel/brake  ");
-  term.gray("\u2190/\u2192")(": indicators  ");
-  term.gray("h")(": hazard  ");
-  term.gray("L")(": low beam  ");
-  term.gray("H")(": high beam  ");
-  term.gray("space")(": horn  ");
-  term.gray("o/1/2/3/4/t")(": doors FL/FR/RL/RR/trunk  ");
-  term.gray("l")(": lock/unlock  ");
-  term.gray("+/-")(": filler FPS  ");
-  term.gray("p")(": pause filler\n\n");
+  term.gray("q: quit  ");
+  term.gray("g: ignition  ");
+  term.gray("e: engine  ");
+  term.gray("\u2191/\u2193: accel/brake  ");
+  term.gray("\u2190/\u2192: indicators  ");
+  term.gray("h: hazard  ");
+  term.gray("L: low beam  ");
+  term.gray("H: high beam  ");
+  term.gray("space: horn  ");
+  term.gray("o/1/2/3/4/t: doors FL/FR/RL/RR/trunk  ");
+  term.gray("l: lock/unlock  ");
+  term.gray("+/-: filler FPS  ");
+  term.gray("p: pause filler\n\n");
 }
 
 let lastDraw = 0;
@@ -385,21 +385,34 @@ function drawTui() {
   term.eraseDisplayBelow();
 
   term.bold("State:\n");
-  term(` Ignition: ${state.ignition?term.green('ON'):term.red('OFF')}   `);
-  term(`Engine: ${state.engineOn?term.green('ON'):term.red('OFF')}   `);
-  term(`Locked: ${state.locked?term.green('YES'):term.red('NO')}   `);
-  term(`Hazard: ${state.lights.hazard?'ON':'OFF'}\n`);
+  term(" Ignition: "); state.ignition ? term.green('ON') : term.red('OFF'); term('   ');
+  term("Engine: "); state.engineOn ? term.green('ON') : term.red('OFF'); term('   ');
+  term("Locked: "); state.locked ? term.green('YES') : term.red('NO'); term('   ');
+  term(`Hazard: ${state.lights.hazard ? 'ON' : 'OFF'}\n`);
 
   term(` RPM: ${state.rpm.toFixed(0)}  (target ${state.targetRpm.toFixed(0)})   `);
   term(`Speed: ${state.speed.toFixed(1)} kph  (target ${state.targetSpeed.toFixed(1)})\n`);
   term(` Throttle: ${state.throttle|0}%   Brake: ${state.brake|0}%\n`);
 
-  term(` Doors: FL=${flag(state.doors.FL)} FR=${flag(state.doors.FR)} RL=${flag(state.doors.RL)} RR=${flag(state.doors.RR)} TRUNK=${flag(state.doors.trunk)}\n`);
-  term(` Lights: low=${flag(state.lights.low)} high=${flag(state.lights.high)} left=${flag(state.lights.left)} right=${flag(state.lights.right)} hazard=${flag(state.lights.hazard)}\n`);
-  term(` Filler: ${FILLER_ON?flag(running):'OFF'}  GEN_FPS=${GEN_FPS}  EXT=${Math.round(EXT_RATIO*100)}%  RTR=${Math.round(RTR_RATIO*100)}%\n`);
+  term(' Doors: FL='); writeFlag(state.doors.FL);
+  term(' FR='); writeFlag(state.doors.FR);
+  term(' RL='); writeFlag(state.doors.RL);
+  term(' RR='); writeFlag(state.doors.RR);
+  term(' TRUNK='); writeFlag(state.doors.trunk); term('\n');
+
+  term(' Lights: low='); writeFlag(state.lights.low);
+  term(' high='); writeFlag(state.lights.high);
+  term(' left='); writeFlag(state.lights.left);
+  term(' right='); writeFlag(state.lights.right);
+  term(' hazard='); writeFlag(state.lights.hazard); term('\n');
+
+  term(' Filler: ');
+  if (FILLER_ON) writeFlag(running); else term.gray('OFF');
+  term(`  GEN_FPS=${GEN_FPS}  EXT=${Math.round(EXT_RATIO*100)}%  RTR=${Math.round(RTR_RATIO*100)}%\n`);
 }
 
-function flag(v){ return v ? term.green('ON') : term.gray('OFF'); }
+function flag(v){ return v ? 'ON' : 'OFF'; }
+function writeFlag(v){ v ? term.green('ON') : term.gray('OFF'); }
 function banner(s){ term.moveTo(1,6); term.eraseLine(); term.bold.cyan(` ${s}\n`); }
 
 // ---------- Utils ----------
