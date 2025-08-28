@@ -35,11 +35,44 @@ const ENGINE_HZ = 20;         // engine/vehicle frame rate
 const HEARTBEAT_HZ = 2;       // heartbeat rate
 const FILLER_ON = true;       // random filler frames
 
+// ---------- Predefined address pool (50 unique STD IDs) ----------
+function genUniqueStdIds(n, min=0x100, max=0x7FF) {
+  const set = new Set();
+  while (set.size < n) {
+    const id = randInt(min, max);
+    set.add(id);
+  }
+  return Array.from(set);
+}
+
+const PRESET_IDS = genUniqueStdIds(50);
+const FEATURE_IDS = PRESET_IDS.slice(0, 25);
+const RANDOM_IDS  = PRESET_IDS.slice(25);
+
+const ADDRS = {
+  ENGINE: FEATURE_IDS[0],
+  DOORS: FEATURE_IDS[1],
+  BUTTONS: FEATURE_IDS[2],
+  LIGHTS: FEATURE_IDS[3],
+  HEARTBEAT: FEATURE_IDS[4],
+  SENSORS: FEATURE_IDS.slice(5), // remaining mapped to generic sensors
+};
+
 // ---------- WS server ----------
 const wss = new WebSocketServer({ host: HOST, port: PORT });
 const boot = Date.now();
 
 log(`Listening on ws://${HOST}:${PORT}`);
+log('Address map (first 10 shown):',
+  {
+    ENGINE: ADDRS.ENGINE.toString(16).toUpperCase(),
+    DOORS: ADDRS.DOORS.toString(16).toUpperCase(),
+    BUTTONS: ADDRS.BUTTONS.toString(16).toUpperCase(),
+    LIGHTS: ADDRS.LIGHTS.toString(16).toUpperCase(),
+    HEARTBEAT: ADDRS.HEARTBEAT.toString(16).toUpperCase(),
+    RANDOM_IDS: RANDOM_IDS.slice(0,5).map(i=>i.toString(16).toUpperCase())
+  }
+);
 
 wss.on('connection', (ws, req) => {
   const peer = `${req.socket.remoteAddress}`;
@@ -77,6 +110,7 @@ const state = {
 let running = true;
 setInterval(()=>{ if (running && FILLER_ON) broadcast(randomFrameCsv()); }, Math.max(1, Math.round(1000/GEN_FPS)));
 setInterval(()=>{ if (running) emitEngineVehicleFrame(); }, Math.round(1000/ENGINE_HZ));
+setInterval(()=>{ if (running) emitSensors(); }, 200);
 setInterval(()=>{ if (running) emitHeartbeat(); }, Math.round(1000/HEARTBEAT_HZ));
 
 // physics-ish update @50Hz
@@ -184,7 +218,7 @@ function emitEngineVehicleFrame() {
   const kph = clamp(0, 255, Math.round(state.speed));
   const thr = clamp(0, 100, Math.round(state.throttle));
   const bytes = [hi, lo, kph, thr, 0, 0, 0, 0];
-  broadcast(csvFrame('STD', 0x1F0, bytes.length, bytes));
+  broadcast(csvFrame('STD', ADDRS.ENGINE, bytes.length, bytes));
 }
 
 function emitDoors() {
@@ -197,7 +231,7 @@ function emitDoors() {
   if (state.doors.trunk) b0 |= 1<<6;
   if (state.locked) b0 |= 1<<7;
   const bytes = [b0, 0,0,0,0,0,0,0];
-  broadcast(csvFrame('STD', 0x130, 2, bytes.slice(0,2)));
+  broadcast(csvFrame('STD', ADDRS.DOORS, 2, bytes.slice(0,2)));
 }
 
 function emitLights() {
@@ -209,7 +243,7 @@ function emitLights() {
   if (state.lights.right)  b0 |= 1<<3;
   if (state.lights.hazard) b0 |= 1<<4;
   const bytes = [b0];
-  broadcast(csvFrame('STD', 0x3D0, 1, bytes));
+  broadcast(csvFrame('STD', ADDRS.LIGHTS, 1, bytes));
 }
 
 function emitButton(code, pressed) {
@@ -217,20 +251,33 @@ function emitButton(code, pressed) {
   // We’ll hash some codes to bytes
   const c = (hash8(code) & 0xFF);
   const bytes = [c, pressed & 1];
-  broadcast(csvFrame('STD', 0x12F, 2, bytes));
+  broadcast(csvFrame('STD', ADDRS.BUTTONS, 2, bytes));
 }
 
 function emitHeartbeat() {
   state.heartbeat = (state.heartbeat + 1) & 0xFF;
   const bytes = [state.heartbeat];
-  broadcast(csvFrame('STD', 0x2F0, 1, bytes));
+  broadcast(csvFrame('STD', ADDRS.HEARTBEAT, 1, bytes));
+}
+
+// Additional sensor channels mapped to FEATURE_IDS beyond the primary signals
+function emitSensors() {
+  if (!ADDRS.SENSORS || ADDRS.SENSORS.length === 0) return;
+  for (const id of ADDRS.SENSORS) {
+    // Generate a short payload with values that drift a bit over time
+    const t = now();
+    const v1 = (Math.sin(t/500) * 127 + 128) & 0xFF;
+    const v2 = (Math.cos(t/700) * 127 + 128) & 0xFF;
+    const v3 = randInt(0, 255);
+    broadcast(csvFrame('STD', id, 3, [v1, v2, v3]));
+  }
 }
 
 // ---------- Random filler frames ----------
 function randomFrameCsv() {
   const isExt = Math.random() < EXT_RATIO;
   const isRtr = Math.random() < RTR_RATIO;
-  const id = isExt ? randInt(0, 0x1FFFFFFF) : randInt(0, 0x7FF);
+  const id = (isExt ? randInt(0, 0x1FFFFFFF) : RANDOM_IDS[randInt(0, RANDOM_IDS.length-1)]) >>> 0;
   const dlc = randInt(0, 8);
   const data = isRtr ? [] : Array.from({ length: dlc }, () => randInt(0,255));
   const type = isRtr ? (isExt?'EXT:RTR':'STD:RTR') : (isExt?'EXT':'STD');
