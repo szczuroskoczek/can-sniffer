@@ -10,6 +10,7 @@ interface WebSocketContextValue {
   connect: (urlOverride?: string) => void;
   disconnect: () => void;
   toggle: () => void;
+  addMessageListener: (listener: (line: string) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue | undefined>(undefined);
@@ -20,6 +21,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [lastError, setLastError] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const currentUrlRef = useRef<string | null>(null);
+  const listenersRef = useRef(new Set<(line: string) => void>());
 
   const cleanupSocket = useCallback(() => {
     if (socketRef.current) {
@@ -61,6 +63,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ws.onerror = (event: any) => {
         setLastError(typeof event?.message === 'string' ? event.message : 'Connection error');
         setStatus('error');
+      };
+      ws.onmessage = (evt: MessageEvent) => {
+        const data = (evt && (evt as any).data) ?? '';
+        const line = typeof data === 'string' ? data : '';
+        // Fan out to listeners without causing React re-renders here
+        listenersRef.current.forEach((fn) => {
+          try { fn(line); } catch {}
+        });
       };
       ws.onclose = () => {
         setStatus('disconnected');
@@ -109,6 +119,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     connect,
     disconnect,
     toggle,
+    addMessageListener: (listener: (line: string) => void) => {
+      listenersRef.current.add(listener);
+      return () => listenersRef.current.delete(listener);
+    },
   }), [connect, disconnect, lastError, status, toggle]);
 
   return (
