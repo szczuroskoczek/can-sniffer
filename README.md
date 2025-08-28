@@ -1,50 +1,133 @@
-# Welcome to your Expo app 👋
+# CAN Sniffer Client
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native Expo app for connecting to and monitoring CAN bus networks via WebSocket servers.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Server management (add, edit, delete, select servers)
+- Navigation between different CAN operations
+- Persistent server configuration using AsyncStorage
+- TypeScript support with strict typing
+- React Navigation for seamless screen transitions
 
-   ```bash
-   npm install
-   ```
+## Installation
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+1. Install dependencies:
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Install Expo-specific dependencies:
+```bash
+npx expo install react-native-screens react-native-safe-area-context @react-native-async-storage/async-storage
+```
 
-## Learn more
+3. Install React Navigation packages:
+```bash
+npm install @react-navigation/native @react-navigation/native-stack
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Running the App
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+# Start the development server
+npm run start
 
-## Join the community
+# Run on Android
+npm run android
 
-Join our community of developers creating universal apps.
+# Run on iOS
+npm run ios
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Run on web
+npm run web
+```
+
+## App Structure
+
+### Navigation Flow
+
+1. **LaunchGate**: Determines initial route based on saved servers
+   - No servers → Navigate to Servers screen
+   - Servers exist but none selected → Navigate to ServerSelect
+   - Server selected → Navigate to MainMenu
+
+2. **MainMenu**: Main dashboard with 4 operation buttons
+   - Sniff CAN Messages
+   - Log All Messages
+   - Send Custom Message
+   - Saved Messages
+   - Settings gear icon in header
+
+3. **ServerSelect**: Choose from available servers when none is selected
+
+4. **Settings Stack**: 
+   - Settings: Main settings screen
+   - Servers: Full CRUD operations for server management
+
+### Key Components
+
+- **SettingsContext**: React Context with useReducer for state management
+- **AsyncStorage**: Persistent storage for server list and selection
+- **HeaderGear**: Settings icon component for navigation
+- **Server Management**: Add, edit, delete, and select servers
+
+### Server Configuration
+
+Servers are stored with the following structure:
+```typescript
+type Server = {
+  id: string;
+  url: string; // e.g., "ws://192.168.4.1:81/"
+};
+```
+
+## Development
+
+The app uses:
+- **React Navigation 7** for navigation
+- **TypeScript** for type safety
+- **React Context + useReducer** for state management
+- **AsyncStorage** for persistence
+- **React Native core components** (no external UI library)
+
+### File Structure
+
+```
+src/
+├── navigation/
+│   ├── AppNavigator.tsx    # Main navigation setup
+│   └── types.ts           # Navigation type definitions
+├── screens/
+│   ├── LaunchGate.tsx     # Initial routing logic
+│   ├── MainMenu.tsx       # Main dashboard
+│   ├── ServerSelect.tsx   # Server selection
+│   ├── Settings.tsx       # Settings menu
+│   ├── Servers.tsx        # Server management
+│   └── [Placeholder screens for CAN operations]
+├── context/
+│   └── SettingsContext.tsx # State management
+├── components/
+│   └── HeaderGear.tsx     # Settings icon
+└── utils/
+    └── storage.ts         # AsyncStorage utilities
+```
+
+## Next Steps
+
+This is the foundation for the CAN sniffer client. Future implementations will include:
+
+1. WebSocket connection management
+2. Real-time CAN message display
+3. Message filtering and search
+4. Custom message composition and sending
+5. Message logging and export
+6. Saved message templates
+
+## Usage
+
+1. **First Launch**: If no servers are configured, you'll be taken directly to the server management screen
+2. **Add Server**: Enter a WebSocket URL (e.g., `ws://192.168.4.1:81/`)
+3. **Select Server**: Choose which server to connect to
+4. **Main Menu**: Access all CAN operations from the main dashboard
+5. **Settings**: Manage servers via the gear icon in the header
